@@ -3,13 +3,13 @@ class LocalAnalysisEngine {
     final questionInLowerCase = question.toLowerCase();
 
     if (questionInLowerCase.contains('eldest child')) {
-      return _countEldestChildren(data);
+      return _getEldestChildrenNames(data);
     } else if (questionInLowerCase.contains('only son')) {
-      return _countOnlySons(data);
+      return _getOnlySonsNames(data);
     } else if (questionInLowerCase.contains('district') || questionInLowerCase.contains('native place')) {
       return _getDistrictDistribution(data);
     } else if (questionInLowerCase.contains('siblings') || questionInLowerCase.contains('brothers and sisters')) {
-      return _getSiblingInfo(data);
+      return _getStudentsWithSiblingsNames(data);
     } else if (questionInLowerCase.contains('parents') && (questionInLowerCase.contains('alive') || questionInLowerCase.contains('deceased') || questionInLowerCase.contains('separated'))) {
       return _getParentStatus(data);
     } else if (questionInLowerCase.contains('occupation') && (questionInLowerCase.contains('father') || questionInLowerCase.contains('mother'))) {
@@ -22,29 +22,19 @@ class LocalAnalysisEngine {
   List<List<dynamic>> getFilteredData(String query, List<List<dynamic>> data) {
     final queryInLowerCase = query.toLowerCase();
 
-    // --- Start of specific question handlers ---
-    if (queryInLowerCase.contains('eldest child')) {
-      return _getEldestChildren(data);
-    }
-    // --- End of specific question handlers ---
-
-    // If no specific question matches, perform a generic search across all fields.
     if (data.length < 2 || query.trim().isEmpty) {
-      // Not enough data to search or query is empty, return nothing.
       return [];
     }
 
-    // Initialize with header rows
     final List<List<dynamic>> filteredData = [data[0], data[1]];
 
-    // Iterate over data rows
     for (int i = 2; i < data.length; i++) {
       final row = data[i];
       bool rowContainsQuery = false;
       for (final cell in row) {
         if (cell != null && cell.toString().toLowerCase().contains(queryInLowerCase)) {
           rowContainsQuery = true;
-          break; // Found match in this row, no need to check other cells
+          break;
         }
       }
       if (rowContainsQuery) {
@@ -55,61 +45,52 @@ class LocalAnalysisEngine {
     return filteredData;
   }
 
-  String _countEldestChildren(List<List<dynamic>> data) {
-    final headers = data[1].map((e) => e.toString()).toList();
-    final elderIndex = headers.indexWhere((h) => h.toLowerCase().contains('eldest'));
+  String _getEldestChildrenNames(List<List<dynamic>> data) {
+    final headers = data[1].map((e) => e.toString().toLowerCase().trim()).toList();
+    final elderIndex = headers.indexWhere((h) => h == 'are you the eldest?');
+    final nameIndex = headers.indexWhere((h) => h == 'name');
 
-    if (elderIndex == -1) {
-      return "Could not find the 'Eldest' column in the data.";
+    if (elderIndex == -1 || nameIndex == -1) {
+      return "Could not find the required columns ('Are you the Eldest?', 'Name'). Please check your file.";
     }
 
-    int eldestCount = 0;
+    List<String> eldestChildrenNames = [];
     for (int i = 2; i < data.length; i++) {
       if (data[i][elderIndex].toString().toLowerCase() == 'yes') {
-        eldestCount++;
+        eldestChildrenNames.add(data[i][nameIndex].toString());
       }
     }
-    return "There are $eldestCount students who are the eldest child in their family.";
+    if (eldestChildrenNames.isEmpty) {
+        return "No students are the eldest child in their family.";
+    }
+    return "The following students are the eldest child: ${eldestChildrenNames.join(', ')}.";
   }
 
-  List<List<dynamic>> _getEldestChildren(List<List<dynamic>> data) {
-    final headers = data[1].map((e) => e.toString()).toList();
-    final elderIndex = headers.indexWhere((h) => h.toLowerCase().contains('eldest'));
+  String _getOnlySonsNames(List<List<dynamic>> data) {
+    final headers = data[1].map((e) => e.toString().toLowerCase().trim()).toList();
+    final onlySonIndex = headers.indexWhere((h) => h == 'are you the only son?');
+    final nameIndex = headers.indexWhere((h) => h == 'name');
 
-    if (elderIndex == -1) {
-      return [];
+    if (onlySonIndex == -1 || nameIndex == -1) {
+      return "Could not find 'Are you the only Son?' or 'Name' columns.";
     }
 
-    final List<List<dynamic>> filteredData = [data[0], data[1]]; // Keep headers
+    List<String> onlySonsNames = [];
     for (int i = 2; i < data.length; i++) {
-      if (data[i][elderIndex].toString().toLowerCase() == 'yes') {
-        filteredData.add(data[i]);
+      if (data[i][onlySonIndex].toString().toLowerCase() == 'yes') {
+        onlySonsNames.add(data[i][nameIndex].toString());
       }
     }
-    return filteredData;
-  }
 
-  String _countOnlySons(List<List<dynamic>> data) {
-    final headers = data[1].map((e) => e.toString()).toList();
-    final genderIndex = headers.indexWhere((h) => h.toLowerCase().contains('gender'));
-    final brothersIndex = headers.indexWhere((h) => h.toLowerCase().contains('no. of brothers'));
-
-    if (genderIndex == -1 || brothersIndex == -1) {
-      return "Could not find 'Gender' or 'No. of brothers' columns.";
+     if (onlySonsNames.isEmpty) {
+        return "No students are the only son in their family.";
     }
-
-    int onlySonCount = 0;
-    for (int i = 2; i < data.length; i++) {
-      if (data[i][genderIndex].toString().toLowerCase() == 'male' && (data[i][brothersIndex] == 0 || data[i][brothersIndex] == null)) {
-        onlySonCount++;
-      }
-    }
-    return "There are $onlySonCount students who are the only son in their family.";
+    return "The following students are the only son in their family: ${onlySonsNames.join(', ')}.";
   }
 
   String _getDistrictDistribution(List<List<dynamic>> data) {
     final headers = data[1].map((e) => e.toString()).toList();
-    final districtIndex = headers.indexWhere((h) => h.toLowerCase().contains('district'));
+    final districtIndex = headers.indexWhere((h) => h.contains('district'));
 
     if (districtIndex == -1) {
       return "Could not find the 'District' column in the data.";
@@ -131,35 +112,34 @@ class LocalAnalysisEngine {
     return "The distribution of students by district is: $distribution";
   }
 
-  String _getSiblingInfo(List<List<dynamic>> data) {
+  String _getStudentsWithSiblingsNames(List<List<dynamic>> data) {
     final headers = data[1].map((e) => e.toString()).toList();
-    final brothersIndex = headers.indexWhere((h) => h.toLowerCase().contains('no. of brothers'));
-    final sistersIndex = headers.indexWhere((h) => h.toLowerCase().contains('no. of sisters'));
+    final brothersIndex = headers.indexWhere((h) => h.contains('no. of brothers'));
+    final sistersIndex = headers.indexWhere((h) => h.contains('no. of sisters'));
+    final nameIndex = headers.indexWhere((h) => h == 'name');
 
-    if (brothersIndex == -1 || sistersIndex == -1) {
-      return "Could not find 'No. of brothers' or 'No. of sisters' columns.";
+    if (brothersIndex == -1 || sistersIndex == -1 || nameIndex == -1) {
+      return "Could not find 'No. of brothers', 'No. of sisters' or 'Name' columns.";
     }
 
-    int withSiblings = 0;
-    int totalBrothers = 0;
-    int totalSisters = 0;
-
+    List<String> studentsWithSiblings = [];
     for (int i = 2; i < data.length; i++) {
       final brothers = data[i][brothersIndex] ?? 0;
       final sisters = data[i][sistersIndex] ?? 0;
       if (brothers > 0 || sisters > 0) {
-        withSiblings++;
+        studentsWithSiblings.add(data[i][nameIndex].toString());
       }
-      totalBrothers += (brothers is int) ? brothers : int.tryParse(brothers.toString()) ?? 0;
-      totalSisters += (sisters is int) ? sisters : int.tryParse(sisters.toString()) ?? 0;
     }
-    return "$withSiblings students have siblings. The total number of brothers is $totalBrothers and sisters is $totalSisters.";
+     if (studentsWithSiblings.isEmpty) {
+        return "No students have siblings.";
+    }
+    return "The following students have siblings: ${studentsWithSiblings.join(', ')}.";
   }
 
   String _getParentStatus(List<List<dynamic>> data) {
     final headers = data[1].map((e) => e.toString()).toList();
-    final fatherStatusIndex = headers.indexWhere((h) => h.toLowerCase().contains('father status'));
-    final motherStatusIndex = headers.indexWhere((h) => h.toLowerCase().contains('mother status'));
+    final fatherStatusIndex = headers.indexWhere((h) => h.contains('father status'));
+    final motherStatusIndex = headers.indexWhere((h) => h.contains('mother status'));
 
     if (fatherStatusIndex == -1 || motherStatusIndex == -1) {
       return "Could not find 'Father Status' or 'Mother Status' columns.";
@@ -179,8 +159,8 @@ class LocalAnalysisEngine {
 
   String _getParentOccupation(List<List<dynamic>> data) {
     final headers = data[1].map((e) => e.toString()).toList();
-    final fatherOccIndex = headers.indexWhere((h) => h.toLowerCase().contains('father\'s occupation'));
-    final motherOccIndex = headers.indexWhere((h) => h.toLowerCase().contains('mother\'s occupation'));
+    final fatherOccIndex = headers.indexWhere((h) => h.contains('father\'s occupation'));
+    final motherOccIndex = headers.indexWhere((h) => h.contains('mother\'s occupation'));
 
     if (fatherOccIndex == -1 || motherOccIndex == -1) {
       return "Could not find 'Father\'s Occupation' or 'Mother\'s Occupation' columns.";

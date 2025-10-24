@@ -13,8 +13,8 @@ class AnalysisPage extends StatefulWidget {
 
 class _AnalysisPageState extends State<AnalysisPage> {
   String? _selectedCategory;
-  final _searchController = TextEditingController();
-  List<String> _suggestions = [];
+  String? _selectedQuestion;
+  final _nameSearchController = TextEditingController();
   String _answer = 'The answer to your question will appear here.';
   bool _isLoading = false;
   final _localAnalysisEngine = LocalAnalysisEngine();
@@ -56,31 +56,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
   };
 
   @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(_onSearchChanged);
-  }
-
-  @override
   void dispose() {
-    _searchController.dispose();
+    _nameSearchController.dispose();
     super.dispose();
-  }
-
-  void _onSearchChanged() {
-    setState(() {
-      if (_selectedCategory != null && _searchController.text.isNotEmpty) {
-        _suggestions = _questions[_selectedCategory]!
-            .where(
-              (question) => question.toLowerCase().contains(
-                    _searchController.text.toLowerCase(),
-                  ),
-            )
-            .toList();
-      } else {
-        _suggestions = [];
-      }
-    });
   }
 
   Future<String> _getAnswerForQuestion(String question) async {
@@ -91,18 +69,11 @@ class _AnalysisPageState extends State<AnalysisPage> {
     return _localAnalysisEngine.getAnswer(question, widget.excelData!);
   }
 
-  void _getFilteredDataForQuestion(String question) {
-    if (widget.excelData == null) {
+  void _searchByName(String name) {
+    if (widget.excelData == null || name.isEmpty) {
       return;
     }
-    setState(() {
-      _isLoading = true;
-    });
-    final data = _localAnalysisEngine.getFilteredData(question, widget.excelData!);
-    setState(() {
-      _isLoading = false;
-    });
-
+    final data = _localAnalysisEngine.getFilteredData(name, widget.excelData!);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -125,19 +96,34 @@ class _AnalysisPageState extends State<AnalysisPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              TextField(
+                controller: _nameSearchController,
+                decoration: InputDecoration(
+                    hintText: 'Search student by name...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(25.0)),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.send),
+                      onPressed: () {
+                        _searchByName(_nameSearchController.text);
+                      },
+                    )),
+              ),
               const SizedBox(height: 20),
               const Text(
-                'Filter by Category',
+                'Ask a Question',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
+                value: _selectedCategory,
                 hint: const Text('Select a category'),
                 onChanged: (String? newValue) {
                   setState(() {
                     _selectedCategory = newValue;
-                    _onSearchChanged();
+                    _selectedQuestion = null;
                   });
                 },
                 items: _questions.keys.map<DropdownMenuItem<String>>((String value) {
@@ -157,32 +143,30 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              TextField(
-                controller: _searchController,
-                decoration: const InputDecoration(
-                  hintText: 'Search or ask your own question...',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(25.0)),
-                  ),
-                ),
-              ),
-              if (_suggestions.isNotEmpty)
-                SizedBox(
-                  height: 200,
-                  child: ListView.builder(
-                    itemCount: _suggestions.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        title: Text(_suggestions[index]),
-                        onTap: () {
-                          _searchController.text = _suggestions[index];
-                          setState(() {
-                            _suggestions = [];
-                          });
-                        },
-                      );
-                    },
+              if (_selectedCategory != null)
+                DropdownButtonFormField<String>(
+                  value: _selectedQuestion,
+                  hint: const Text('Select a question'),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedQuestion = newValue;
+                    });
+                  },
+                  items: _questions[_selectedCategory]!
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(25.0)),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 15,
+                    ),
                   ),
                 ),
               const SizedBox(height: 20),
@@ -190,15 +174,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   ElevatedButton(
-                    onPressed: _isLoading
+                    onPressed: _isLoading || _selectedQuestion == null
                         ? null
                         : () async {
                             setState(() {
                               _isLoading = true;
                               _answer = 'Analyzing...';
                             });
-                            final answer = await _getAnswerForQuestion(
-                                _searchController.text);
+                            final answer =
+                                await _getAnswerForQuestion(_selectedQuestion!);
                             setState(() {
                               _answer = answer;
                               _isLoading = false;
@@ -213,24 +197,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text('Ask'),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () {
-                            _getFilteredDataForQuestion(
-                                _searchController.text);
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Get Data'),
                   ),
                 ],
               ),
@@ -249,7 +215,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               ),
               const SizedBox(height: 20),
               const Text(
-                'Full Analysis Results',
+                'All Student Data',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
