@@ -11,28 +11,9 @@ class UploadPage extends StatefulWidget {
   State<UploadPage> createState() => _UploadPageState();
 }
 
-class _UploadPageState extends State<UploadPage> with SingleTickerProviderStateMixin {
-  bool _isHovering = false;
+class _UploadPageState extends State<UploadPage> {
   String? _fileName;
   List<List<dynamic>>? _excelData;
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   void _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
@@ -79,33 +60,16 @@ class _UploadPageState extends State<UploadPage> with SingleTickerProviderStateM
               ),
             ),
             const SizedBox(height: 40),
-            MouseRegion(
-              onEnter: (event) {
-                setState(() {
-                  _isHovering = true;
-                });
-                _controller.forward();
-              },
-              onExit: (event) {
-                setState(() {
-                  _isHovering = false;
-                });
-                _controller.reverse();
-              },
-              child: ScaleTransition(
-                scale: _animation.drive(Tween(begin: 1.0, end: 1.1)),
-                child: ElevatedButton.icon(
-                  onPressed: _pickFile,
-                  icon: const Icon(Icons.cloud_upload),
-                  label: const Text('Upload Excel File'),
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.deepPurple,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
+            ElevatedButton.icon(
+              onPressed: _pickFile,
+              icon: const Icon(Icons.cloud_upload),
+              label: const Text('Upload Excel File'),
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.deepPurple,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
                 ),
               ),
             ),

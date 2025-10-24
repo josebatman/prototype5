@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"dbsa-app","appId":"1:1238279973:android:3440c25b7acbeedc441ccc","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"dbsa-app","configurations":{"android":"1:1238279973:android:3440c25b7acbeedc441ccc","web":"1:1238279973:web:24d8806f6d87d80d441ccc"}}}}}}

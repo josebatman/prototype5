@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1238279973",
+    "project_id": "dbsa-app",
+    "storage_bucket": "dbsa-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1238279973:android:3440c25b7acbeedc441ccc",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjQoAV21PR2U2_oJmx_t95b7YwCApDRts"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

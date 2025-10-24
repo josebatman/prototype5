@@ -1,30 +1,22 @@
-
 # Project Blueprint
 
 ## Overview
 
-This document outlines the plan for creating a Flutter application for student data analysis. The application will consist of two main pages: an upload page and an analysis page.
+This project is a Flutter application designed to analyze student data from an Excel file. The application allows users to upload an Excel file, view the data in a table, ask questions about the data using a generative AI model, and view filtered data on a separate page.
 
 ## Features
 
-### Upload Page
-- A button to upload Excel files.
-- A preview icon to show the uploaded file.
-- An "Analyze" button to navigate to the analysis page.
+- **Excel Upload:** Users can upload an Excel file containing student data.
+- **Data Display:** The application parses the Excel file and displays the data in a tabular format.
+- **Question Answering:** Users can ask questions about the data, and a generative AI model provides answers.
+- **Bulk Analysis:** Users can get answers to a predefined list of questions with a single button click.
+- **Filtered Data Page:** A dedicated page to display filtered student data in a card format, with each card representing a student.
+- **UI:** The application has a simple and intuitive user interface with a clear separation of the upload and analysis sections.
 
-### Analysis Page
-- A table to display the data from the uploaded Excel file.
-- A search box at the top of the page to filter the data.
+## Current Plan
 
-## Design
-- The application will use a colorful and modern design.
-- Animations will be used to enhance the user experience.
-
-## Plan
-
-1. **Add Dependencies:** Add `go_router` for navigation and `file_picker` for file selection to `pubspec.yaml`.
-2. **Create Upload Page:** Create a new file `lib/upload_page.dart` that contains the UI for uploading files.
-3. **Create Analysis Page:** Create a new file `lib/analysis_page.dart` that contains the UI for displaying the analysis.
-4. **Set up Routing:** Modify `lib/main.dart` to use `go_router` to manage navigation between the upload and analysis pages.
-5. **Implement UI:** Design and implement a visually appealing and user-friendly interface with animations.
-6. **Format Code:** Ensure the code is well-formatted and follows Dart best practices.
+- [x] Create a new page `lib/filtered_data_page.dart` to display filtered data.
+- [x] Update `lib/analysis_page.dart` to navigate to the `FilteredDataPage` when the "Get Data" button is clicked.
+- [x] Pass the filtered data from the `AnalysisPage` to the `FilteredDataPage`.
+- [x] Display the filtered data in a card format on the `FilteredDataPage`.
+- [ ] Test the new filtered data page with a real Excel file.

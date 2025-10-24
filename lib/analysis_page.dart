@@ -1,5 +1,6 @@
-
 import 'package:flutter/material.dart';
+import 'local_analysis_engine.dart';
+import 'filtered_data_page.dart';
 
 class AnalysisPage extends StatefulWidget {
   final List<List<dynamic>>? excelData;
@@ -7,7 +8,7 @@ class AnalysisPage extends StatefulWidget {
   const AnalysisPage({super.key, this.excelData});
 
   @override
-  _AnalysisPageState createState() => _AnalysisPageState();
+  State<AnalysisPage> createState() => _AnalysisPageState();
 }
 
 class _AnalysisPageState extends State<AnalysisPage> {
@@ -15,6 +16,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
   final _searchController = TextEditingController();
   List<String> _suggestions = [];
   String _answer = 'The answer to your question will appear here.';
+  bool _isLoading = false;
+  final _localAnalysisEngine = LocalAnalysisEngine();
 
   final Map<String, List<String>> _questions = {
     'Family and Personal Details': [
@@ -68,8 +71,11 @@ class _AnalysisPageState extends State<AnalysisPage> {
     setState(() {
       if (_selectedCategory != null && _searchController.text.isNotEmpty) {
         _suggestions = _questions[_selectedCategory]!
-            .where((question) =>
-                question.toLowerCase().contains(_searchController.text.toLowerCase()))
+            .where(
+              (question) => question.toLowerCase().contains(
+                    _searchController.text.toLowerCase(),
+                  ),
+            )
             .toList();
       } else {
         _suggestions = [];
@@ -77,11 +83,32 @@ class _AnalysisPageState extends State<AnalysisPage> {
     });
   }
 
-  void _getAnswer() {
-    // In the future, we will implement the logic to get the real answer here.
+  Future<String> _getAnswerForQuestion(String question) async {
+    if (widget.excelData == null) {
+      return 'No data available to answer the question.';
+    }
+
+    return _localAnalysisEngine.getAnswer(question, widget.excelData!);
+  }
+
+  void _getFilteredDataForQuestion(String question) {
+    if (widget.excelData == null) {
+      return;
+    }
     setState(() {
-      _answer = 'Fetching answer for: "${_searchController.text}"';
+      _isLoading = true;
     });
+    final data = _localAnalysisEngine.getFilteredData(question, widget.excelData!);
+    setState(() {
+      _isLoading = false;
+    });
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FilteredDataPage(filteredData: data),
+      ),
+    );
   }
 
   @override
@@ -92,115 +119,145 @@ class _AnalysisPageState extends State<AnalysisPage> {
         backgroundColor: Colors.deepPurple,
         elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text(
-              'Filter by Category',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const SizedBox(height: 20),
+              const Text(
+                'Filter by Category',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              value: _selectedCategory,
-              hint: const Text('Select a category'),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedCategory = newValue;
-                  _onSearchChanged();
-                });
-              },
-              items: _questions.keys.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(25.0)),
-                ),
-                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: 'Search...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(25.0)),
-                ),
-              ),
-            ),
-            if (_suggestions.isNotEmpty)
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  itemCount: _suggestions.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(_suggestions[index]),
-                      onTap: () {
-                        _searchController.text = _suggestions[index];
-                        setState(() {
-                          _suggestions = [];
-                        });
-                      },
-                    );
-                  },
-                ),
-              ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton(
-                  onPressed: _getAnswer,
-                  child: const Text('Ask'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedCategory,
+                hint: const Text('Select a category'),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedCategory = newValue;
+                    _onSearchChanged();
+                  });
+                },
+                items: _questions.keys.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(25.0)),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 15,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(10.0),
-                border: Border.all(color: Colors.deepPurple),
               ),
-              child: Text(
-                _answer,
-                style: const TextStyle(fontSize: 16),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  hintText: 'Search or ask your own question...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(25.0)),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Analysis Results',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              if (_suggestions.isNotEmpty)
+                SizedBox(
+                  height: 200,
+                  child: ListView.builder(
+                    itemCount: _suggestions.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(_suggestions[index]),
+                        onTap: () {
+                          _searchController.text = _suggestions[index];
+                          setState(() {
+                            _suggestions = [];
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton(
+                    onPressed: _isLoading
+                        ? null
+                        : () async {
+                            setState(() {
+                              _isLoading = true;
+                              _answer = 'Analyzing...';
+                            });
+                            final answer = await _getAnswerForQuestion(
+                                _searchController.text);
+                            setState(() {
+                              _answer = answer;
+                              _isLoading = false;
+                            });
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Ask'),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: _isLoading
+                        ? null
+                        : () {
+                            _getFilteredDataForQuestion(
+                                _searchController.text);
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Get Data'),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: (widget.excelData != null)
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10.0),
+                  border: Border.all(color: Colors.deepPurple),
+                ),
+                child: SingleChildScrollView(
+                  child: Text(_answer, style: const TextStyle(fontSize: 16)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Full Analysis Results',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              (widget.excelData != null)
                   ? _buildDataTable(widget.excelData!)
                   : const Center(child: Text('No data to display.')),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -233,7 +290,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
       final List<dynamic> newRow = [];
       final extendedRow = List.from(row);
       if (extendedRow.length < originalHeaders.length) {
-        extendedRow.addAll(List.filled(originalHeaders.length - extendedRow.length, null));
+        extendedRow.addAll(
+          List.filled(originalHeaders.length - extendedRow.length, null),
+        );
       }
 
       for (int i = 0; i < extendedRow.length; i++) {
@@ -246,7 +305,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     final academicDetailsStart = headers.indexOf('Academic Year');
     final financialDetailsStart = headers.indexOf('Tuition Fees');
-    final generalRemarksStart = headers.indexOf('Remarks by Administrator') + 1;
+    final generalRemarksStart =
+        headers.indexOf('Remarks by Administrator') + 1;
 
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
@@ -254,7 +314,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
         scrollDirection: Axis.horizontal,
         child: DataTable(
           columnSpacing: 20.0,
-          headingRowColor: MaterialStateColor.resolveWith((states) => Colors.grey[300]!),
+          headingRowColor: WidgetStateColor.resolveWith(
+            (states) => Colors.grey[300]!,
+          ),
           columns: [
             for (var i = 0; i < headers.length; i++)
               DataColumn(
@@ -266,20 +328,31 @@ class _AnalysisPageState extends State<AnalysisPage> {
                       height: 20,
                       child: () {
                         if (i == 0) {
-                          return const Text('Personal Profile',
-                              style: TextStyle(fontWeight: FontWeight.bold));
+                          return const Text(
+                            'Personal Profile',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          );
                         }
-                        if (i == academicDetailsStart && academicDetailsStart != -1) {
-                          return const Text('Academic Details',
-                              style: TextStyle(fontWeight: FontWeight.bold));
+                        if (i == academicDetailsStart &&
+                            academicDetailsStart != -1) {
+                          return const Text(
+                            'Academic Details',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          );
                         }
-                        if (i == financialDetailsStart && financialDetailsStart != -1) {
-                          return const Text('Financial Details',
-                              style: TextStyle(fontWeight: FontWeight.bold));
+                        if (i == financialDetailsStart &&
+                            financialDetailsStart != -1) {
+                          return const Text(
+                            'Financial Details',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          );
                         }
-                        if (i == generalRemarksStart && generalRemarksStart > 0) {
-                          return const Text('General Remarks',
-                              style: TextStyle(fontWeight: FontWeight.bold));
+                        if (i == generalRemarksStart &&
+                            generalRemarksStart > 0) {
+                          return const Text(
+                            'General Remarks',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          );
                         }
                         return const SizedBox.shrink();
                       }(),
@@ -292,7 +365,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
           ],
           rows: dataRows.map((row) {
             final cells = List<DataCell>.generate(headers.length, (index) {
-              final cellValue = (index < row.length) ? row[index]?.toString() ?? '' : '';
+              final cellValue =
+                  (index < row.length) ? row[index]?.toString() ?? '' : '';
               return DataCell(Text(cellValue));
             });
             return DataRow(cells: cells);
